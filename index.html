@@ -1,0 +1,633 @@
+<title>Floor.top Payout Model</title>
+<style>
+:root{
+  --bg:#EEF0EA; --surface:#FFFFFF; --surface-2:#F5F6F1;
+  --ink:#16202C; --ink-muted:#5B6672; --ink-faint:#8892A0;
+  --accent:#9C7519; --accent-soft:#F1E6C9;
+  --accent2:#3E6E62; --accent2-soft:#DEEAE6;
+  --line:#D8DCD1; --line-strong:#C2C8BA;
+  --good:#3E7A4F; --warn:#AD4B2C; --warn-soft:#F5E1D8;
+  --shadow: 0 1px 2px rgba(22,32,44,.06), 0 6px 20px -10px rgba(22,32,44,.18);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#10161C; --surface:#171F27; --surface-2:#1D2731;
+    --ink:#E7EAE4; --ink-muted:#98A2AC; --ink-faint:#6C7684;
+    --accent:#E0B85C; --accent-soft:#3A3220;
+    --accent2:#7FC1AE; --accent2-soft:#1D2E29;
+    --line:#2A333C; --line-strong:#39424C;
+    --good:#77C98B; --warn:#E29572; --warn-soft:#3A2721;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px -12px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10161C; --surface:#171F27; --surface-2:#1D2731;
+  --ink:#E7EAE4; --ink-muted:#98A2AC; --ink-faint:#6C7684;
+  --accent:#E0B85C; --accent-soft:#3A3220;
+  --accent2:#7FC1AE; --accent2-soft:#1D2E29;
+  --line:#2A333C; --line-strong:#39424C;
+  --good:#77C98B; --warn:#E29572; --warn-soft:#3A2721;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px -12px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:"Source Sans 3",ui-sans-serif,system-ui,sans-serif;
+  font-size:14px;line-height:1.5;padding-inline:20px;padding-block:28px 60px;}
+h1,h2,h3{font-family:"Fraunces",Georgia,serif;font-weight:650;color:var(--ink);margin:0;text-wrap:balance;}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;}
+.wrap{max-width:1180px;margin:0 auto;}
+a{color:var(--accent2)}
+
+/* Masthead */
+.masthead{border-bottom:2px solid var(--ink);padding-bottom:16px;margin-bottom:28px;
+  display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;}
+.masthead .eyebrow{font-family:"IBM Plex Mono";font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-muted);margin-bottom:6px;}
+.masthead h1{font-size:30px;}
+.masthead .meta{font-family:"IBM Plex Mono";font-size:11px;color:var(--ink-muted);text-align:right;line-height:1.7;}
+
+.callout{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent2);
+  border-radius:4px;padding:14px 18px;margin-bottom:26px;box-shadow:var(--shadow);}
+.callout p{margin:0 0 8px;}
+.callout p:last-child{margin-bottom:0}
+.callout strong{color:var(--ink)}
+
+/* Pots diagram */
+.pots{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:26px;}
+@media(max-width:640px){.pots{grid-template-columns:1fr}}
+.pot{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px 18px;box-shadow:var(--shadow);}
+.pot .tag{font-family:"IBM Plex Mono";font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:3px;display:inline-block;margin-bottom:8px;}
+.pot.a .tag{background:var(--accent-soft);color:var(--accent)}
+.pot.b .tag{background:var(--accent2-soft);color:var(--accent2)}
+.pot h3{font-size:16px;margin-bottom:6px;}
+.pot p{color:var(--ink-muted);margin:0;font-size:13px}
+
+/* Layout */
+.layout{display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:start;}
+@media(max-width:880px){.layout{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:18px;box-shadow:var(--shadow);
+  position:sticky;top:12px;}
+@media(max-width:880px){.panel{position:static}}
+.panel h2{font-size:15px;margin-bottom:14px;}
+.field{margin-bottom:18px;}
+.field label{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-muted);margin-bottom:6px;}
+.field label .val{font-family:"IBM Plex Mono";color:var(--ink);font-weight:600;}
+.field .hint{font-size:11px;color:var(--ink-faint);margin-top:5px;}
+input[type=range]{width:100%;accent-color:var(--accent2);}
+input[type=number],select{width:100%;background:var(--surface-2);border:1px solid var(--line-strong);color:var(--ink);
+  border-radius:5px;padding:6px 8px;font-family:"IBM Plex Mono";font-size:13px;}
+.seg{display:flex;gap:6px;flex-wrap:wrap;}
+.seg button{flex:1;min-width:60px;background:var(--surface-2);border:1px solid var(--line-strong);color:var(--ink-muted);
+  border-radius:5px;padding:6px 4px;font-size:11px;font-family:"IBM Plex Mono";cursor:pointer;}
+.seg button.active{background:var(--accent2);border-color:var(--accent2);color:var(--surface);font-weight:600;}
+
+/* Tiles */
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:22px;}
+@media(max-width:760px){.tiles{grid-template-columns:1fr 1fr}}
+@media(max-width:460px){.tiles{grid-template-columns:1fr}}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:14px 16px;box-shadow:var(--shadow);}
+.tile .label{font-size:11px;color:var(--ink-muted);margin-bottom:6px;}
+.tile .num{font-family:"IBM Plex Mono";font-size:22px;font-weight:600;color:var(--ink);}
+.tile .num.accent{color:var(--accent)}
+.tile .num.accent2{color:var(--accent2)}
+.tile .sub{font-size:11px;color:var(--ink-faint);margin-top:4px;}
+.tile.wide{grid-column:span 3;}
+@media(max-width:760px){.tile.wide{grid-column:span 2}}
+@media(max-width:460px){.tile.wide{grid-column:span 1}}
+
+section{margin-bottom:28px;}
+section > h2{font-size:16px;margin-bottom:4px;}
+section > .desc{font-size:12px;color:var(--ink-muted);margin-bottom:14px;}
+
+/* chart */
+.chartbox{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;box-shadow:var(--shadow);}
+svg text{fill:var(--ink-muted);font-family:"IBM Plex Mono";font-size:10px;}
+.curve{fill:none;stroke:var(--accent2);stroke-width:2;}
+.marker{fill:var(--accent);stroke:var(--surface);stroke-width:2;}
+.gridline{stroke:var(--line);stroke-width:1;}
+
+/* table */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface);box-shadow:var(--shadow);}
+table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:640px;}
+th,td{padding:9px 12px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap;}
+th:first-child,td:first-child{text-align:left;}
+th{font-family:"IBM Plex Mono";font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-muted);
+  background:var(--surface-2);position:sticky;top:0;}
+td{font-family:"IBM Plex Mono";color:var(--ink);}
+tr.hi td{background:var(--accent-soft);}
+tr:last-child td{border-bottom:none;}
+
+/* gaps list */
+.gaps{background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);}
+.gap-item{padding:13px 18px;border-bottom:1px solid var(--line);display:flex;gap:12px;}
+.gap-item:last-child{border-bottom:none;}
+.gap-item .n{font-family:"IBM Plex Mono";color:var(--warn);font-weight:700;font-size:12px;flex-shrink:0;padding-top:1px;}
+.gap-item .t{font-weight:600;font-size:13px;margin-bottom:3px;}
+.gap-item .d{color:var(--ink-muted);font-size:12.5px;}
+
+footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-size:11px;color:var(--ink-faint);}
+
+.legend{display:flex;gap:16px;font-size:11px;color:var(--ink-muted);margin-top:8px;flex-wrap:wrap;}
+.legend span{display:inline-flex;align-items:center;gap:5px;}
+.dot{width:8px;height:8px;border-radius:2px;display:inline-block;}
+</style>
+
+<div class="wrap">
+  <div class="masthead">
+    <div>
+      <div class="eyebrow">Independent analysis · not affiliated with Clickihood / Floor.top</div>
+      <h1>Floor.top Payout Model</h1>
+    </div>
+    <div class="meta">Source: clickihood.com/whitepapers<br>Read 2026-09-20 · Robinhood Chain · Sept 2026 filing</div>
+  </div>
+
+  <div class="callout">
+    <p><strong>Correction to how this actually works:</strong> the launchpad's 1% trading fee never pays the leaderboard or NFT holders directly. Every launch instead carves off <strong>1–10% of that coin's fixed 1B supply</strong> as a free community allocation (founder's choice, per launch), split 50/50 between all 9,999 employee NFTs and the top-100 NUTS leaderboard. The trading fee's <strong>0.45–0.9% vault cut</strong> only touches you indirectly: it buys stock that backs <em>every</em> coin in circulation, setting a floor price under the free tokens you already received. So "value of the fees" really means: <strong>backing-per-coin (driven by fees) × tokens you were allocated (driven by supply %, not fees)</strong>.</p>
+  </div>
+
+  <div class="pots">
+    <div class="pot a">
+      <span class="tag">Pot 1 · Fixed</span>
+      <h3>Employee NFT pool</h3>
+      <p>50% of the community allocation, split into <strong>one equal claim per NFT</strong> across all 9,999 — whoever holds it during that launch's 7-day claim window. Doesn't matter how well the NFT is earning NUTS; only that you hold it.</p>
+    </div>
+    <div class="pot b">
+      <span class="tag">Pot 2 · Skill-weighted</span>
+      <h3>Leaderboard pool</h3>
+      <p>The other 50%, split among the <strong>top 100 lifetime-NUTS earners</strong>, in proportion to lifetime NUTS — not evenly. Whitepaper gives no distribution curve, so this model lets you set how top-heavy it is.</p>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="panel">
+      <h2>Assumptions</h2>
+
+      <div class="field">
+        <label>Reference launch — cumulative volume <span class="val mono" id="vVolume">$10.0M</span></label>
+        <input type="range" id="volume" min="3.7" max="8.7" step="0.01" value="7">
+        <div class="hint">Total lifetime trading volume that specific coin does (log scale, $5K–$500M). Drives the vault, i.e. the floor.</div>
+      </div>
+
+      <div class="field">
+        <label>Coin market cap, this launch <span class="val mono" id="vMcap">$2.00M</span></label>
+        <input type="range" id="mcap" min="3" max="8.3" step="0.01" value="6.3">
+        <div class="hint">What the coin actually trades at (log scale, $1K–$200M) — speculative premium on top of the vault floor. Neither whitepaper gives any guidance on where these trade; this is entirely your own scenario.</div>
+      </div>
+
+      <div class="field">
+        <label>Scenario preset, from Pons/pump.fun</label>
+        <select id="preset">
+          <option value="" selected>— pick a scenario —</option>
+          <option value="dead">Barely trades — but note below</option>
+          <option value="grad">Graduates, stays small (~1%, the median graduate)</option>
+          <option value="pumpavg">pump.fun's lifetime mean (~$8.2K/token, all launches)</option>
+          <option value="ponsavg">Pons's current mean (~$111.5K/token, hype phase)</option>
+          <option value="breakout">Real breakout (~1-in-20,000, pump.fun's $1M+ tier)</option>
+          <option value="megahit">Category-defining hit (~1-in-180,000, GOAT/CHILLGUY-tier)</option>
+        </select>
+        <div class="hint">Pons/pump.fun-observed reference points, not Floor.top data (it hasn't launched). "Barely trades" is illustrative only — the real ~98–99% outcome for a Floor.top coin isn't a small number, it's a flat $0: per the whitepaper, a coin that never graduates never opens a claim window at all, and its whole community allocation burns after 90 days. There's no slider position for "burned."</div>
+      </div>
+
+      <div class="field">
+        <label>Value basis for tiles &amp; tables below</label>
+        <div class="seg" id="basisSeg">
+          <button type="button" data-v="market" class="active">Market price</button>
+          <button type="button" data-v="floor">Floor (backing)</button>
+        </div>
+        <div class="hint">Market = mcap slider ÷ circulating supply. Floor = the vault-backed minimum. Price can't sit far below 95% of floor for long — arbitrage burns it back up — but can trade well above it.</div>
+      </div>
+
+      <div class="field">
+        <label>Vault fee share <span class="val mono" id="vVault">0.90%</span></label>
+        <input type="range" id="vaultFee" min="0.45" max="0.9" step="0.01" value="0.9">
+        <div class="hint">Of every 1% fill fee. Founder can only lower their own cut (max 0.45%), and whatever they give up lands in the vault too — so 0.90% is the ceiling, reached if the founder cedes fully.</div>
+      </div>
+
+      <div class="field">
+        <label>Community allocation size <span class="val mono" id="vAlloc">5.0%</span></label>
+        <input type="range" id="allocPct" min="1" max="10" step="0.5" value="5">
+        <div class="hint">Founder's per-launch choice of total supply reserved for the Clickihood community. Whitepaper sets no default or incentive to pick high vs low.</div>
+      </div>
+
+      <div class="field">
+        <label>Supply redeemed (denominator shrink)</label>
+        <select id="redeemMode">
+          <option value="0">0% — conservative floor</option>
+          <option value="wp" selected>Whitepaper's worked-example curve</option>
+          <option value="manual">Manual override</option>
+        </select>
+        <div id="manualRedeemWrap" style="display:none;margin-top:10px;">
+          <label>Manual redeemed % <span class="val mono" id="vRedeem">10%</span></label>
+          <input type="range" id="redeemManual" min="0" max="40" step="1" value="10">
+        </div>
+        <div class="hint">Burn-to-redeem shrinks circulating supply, which mechanically raises backing-per-coin. The whitepaper's own example implies ~7% redeemed by $24M cumulative volume, ~15% by $40M — this model interpolates/extrapolates that curve.</div>
+      </div>
+
+      <div class="field">
+        <label>Leaderboard weighting</label>
+        <select id="weightMode">
+          <option value="real" selected>Real data — your top 50 + fitted tail</option>
+          <option value="parametric">Parametric (adjustable skew)</option>
+        </select>
+        <div id="realStatsWrap" class="hint" style="margin-top:8px;"></div>
+        <div id="skewWrap" style="display:none;margin-top:12px;">
+          <label>Leaderboard skew <span class="val mono" id="vSkew">Moderate</span></label>
+          <input type="range" id="skew" min="0" max="2.5" step="0.1" value="1">
+          <div class="hint">0 = split evenly across top 100. 2.5 = rank 1 takes most of the pool.</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Your leaderboard rank <span class="val mono" id="vRank">#25</span></label>
+        <input type="range" id="rank" min="1" max="100" step="1" value="25">
+      </div>
+
+      <div class="field">
+        <label>NFTs you hold <span class="val mono" id="vNfts">3</span></label>
+        <input type="range" id="nfts" min="1" max="50" step="1" value="3">
+        <div class="hint">Mint cap is 3/wallet; more only via secondary.</div>
+      </div>
+
+    </div>
+
+    <div>
+      <section>
+        <h2>This reference launch</h2>
+        <div class="desc">At the volume and settings on the left, for one graduating coin.</div>
+        <div class="tiles">
+          <div class="tile">
+            <div class="label">Backing per coin (floor)</div>
+            <div class="num" id="tBacking">$0.000081</div>
+            <div class="sub" id="tBackingSub">floor value, may trade above this</div>
+          </div>
+          <div class="tile">
+            <div class="label">Market price per coin</div>
+            <div class="num accent" id="tMarket">$0.00201</div>
+            <div class="sub" id="tMarketSub">mcap ÷ circulating supply</div>
+          </div>
+          <div class="tile">
+            <div class="label">Premium over floor</div>
+            <div class="num accent2" id="tPremium">22.2×</div>
+            <div class="sub" id="tPremiumSub">market ÷ backing</div>
+          </div>
+          <div class="tile">
+            <div class="label">Community pool value</div>
+            <div class="num" id="tPool">$4,050</div>
+            <div class="sub" id="tPoolSub">1–10% of 1B supply × price</div>
+          </div>
+          <div class="tile">
+            <div class="label">Per-NFT payout</div>
+            <div class="num accent2" id="tPerNft">$0.20</div>
+            <div class="sub" id="tPerNftSub">of 9,999, this launch</div>
+          </div>
+          <div class="tile">
+            <div class="label">Your rank's payout</div>
+            <div class="num accent2" id="tRank">$0.00</div>
+            <div class="sub" id="tRankSub">rank #25, this launch</div>
+          </div>
+          <div class="tile">
+            <div class="label">Your NFTs, this launch</div>
+            <div class="num" id="tYourNfts">$0.60</div>
+            <div class="sub">held × per-NFT payout</div>
+          </div>
+          <div class="tile">
+            <div class="label">Combined, this launch</div>
+            <div class="num" id="tCombined">$0.60</div>
+            <div class="sub">NFTs + rank payout, one launch</div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Backing-per-coin vs. lifetime volume</h2>
+        <div class="desc">At current vault-fee and redemption settings. Marker = your reference launch.</div>
+        <div class="chartbox">
+          <svg id="chart" viewBox="0 0 640 220" style="width:100%;height:auto;"></svg>
+          <div class="legend">
+            <span><span class="dot" style="background:var(--accent2)"></span>backing per coin ($)</span>
+            <span><span class="dot" style="background:var(--accent)"></span>your reference volume</span>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Value at various launchpad volumes</h2>
+        <div class="desc">Same allocation %, vault fee, redemption mode and skew as above — only cumulative volume changes per row. This is the "what if the launchpad does $X" table.</div>
+        <div class="tablewrap">
+          <table id="volTable">
+            <thead>
+              <tr>
+                <th>Cumulative volume</th>
+                <th>Backing/coin</th>
+                <th>Community pool</th>
+                <th>Per NFT</th>
+                <th>Rank #1</th>
+                <th>Rank #25</th>
+                <th>Rank #100</th>
+              </tr>
+            </thead>
+            <tbody id="volTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2>Value at various market caps</h2>
+        <div class="desc">Same volume, vault-fee, allocation and weighting settings as above — only the coin's trading market cap changes per row. Prices always computed at market here, regardless of the basis toggle. Rows below 0.95× premium are past the arbitrage floor and mechanically wouldn't hold.</div>
+        <div class="tablewrap">
+          <table id="mcapTable">
+            <thead>
+              <tr>
+                <th>Market cap</th>
+                <th>Price/coin</th>
+                <th>Premium vs floor</th>
+                <th>Per NFT</th>
+                <th>Rank #1</th>
+                <th>Rank #25</th>
+                <th>Rank #100</th>
+              </tr>
+            </thead>
+            <tbody id="mcapTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2>What the whitepapers don't tell you</h2>
+        <div class="desc">The gaps that most affect this valuation, ranked by how much they swing the answer.</div>
+        <div class="gaps">
+          <div class="gap-item"><div class="n">01</div><div><div class="t">Founder's allocation % is unconstrained (1–10%, a 10× swing)</div><div class="d">No stated default, no incentive mechanism disclosed for why a founder would pick 10% over 1%. This single knob moves every dollar figure in this model by 10×, and it's set per-launch by someone with no disclosed obligation to the game's community.</div></div></div>
+          <div class="gap-item"><div class="n">02</div><div><div class="t">No launch cadence or platform-adoption target</div><div class="d">Total value compounds with the number of coins that actually graduate (reach 4.2069 ETH raised) — there's no roadmap figure for launches/month, so a per-launch payout is where this model stops; scaling that to a longer horizon is your own assumption, not the whitepaper's.</div></div></div>
+          <div class="gap-item"><div class="n">03</div><div><div class="t">Backing-per-coin is a floor, not the expected price</div><div class="d">The market-cap slider and table above let you separate the two explicitly: floor value is mechanically guaranteed by the vault, market value is pure speculation the whitepaper offers zero guidance on. Toggle "Value basis" to compare them directly for your own scenario.</div></div></div>
+          <div class="gap-item"><div class="n">04</div><div><div class="t">Redemption behavior is illustrative, not guaranteed</div><div class="d">The whitepaper's own Month-1/3/6 numbers assume specific redemption rates (0%, 7%, 15% of supply) that shrink the denominator and inflate backing-per-coin. Nothing forces holders to actually redeem at that pace; the "0% conservative" option in this model is the safer default.</div></div></div>
+          <div class="gap-item"><div class="n">05</div><div><div class="t">One NFT/rank claim per graduated launch, not a standing royalty</div><div class="d">This is stated, but easy to miss: you must be holding the NFT (or still be top-100) at each individual launch's 7-day claim window. Selling an NFT forfeits all future launch claims on it to the buyer — there's no accrual to a wallet independent of holding.</div></div></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <footer>Numbers are a modeling tool built from the public Clickihood/Floor.top whitepapers as published at clickihood.com/whitepapers on 2026-09-20, plus public data on Pons (defillama.com/protocol/pons, bitquery.io) and pump.fun (arxiv.org/abs/2607.02823, protos.com, decrypt.co) as of September 2026. Not financial advice, not affiliated with either project, and not a guarantee any of these figures will occur.</footer>
+</div>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,650;9..144,900&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const TOTAL_SUPPLY = 1e9;
+  const TOTAL_NFTS = 9999;
+  const TOP_N = 100;
+
+  // User-supplied real lifetime-NUTS leaderboard, ranks 1-50
+  const REAL_TOP50 = [2599383835,1395653725,1348998095,1249510167,1066848268,882369002,629929268,591858577,530855965,518805120,504612615,464270951,456046606,422549791,395833650,388486838,385897644,380298825,361603047,353525959,348344641,332795179,316540789,301227811,292170994,288815006,283464959,281423467,264356988,258554153,255209625,238732780,238729472,233396592,232834259,230352835,221692486,214756957,202241272,196958525,190254039,176449283,173727271,171037668,166862561,166036119,164168885,159563857,152561724,148704823];
+
+  function logFit(arr){
+    let sx=0,sy=0,sxy=0,sxx=0; const n=arr.length;
+    arr.forEach((v,i)=>{ const r=i+1, x=Math.log(r), y=Math.log(v); sx+=x; sy+=y; sxy+=x*y; sxx+=x*x; });
+    const mx=sx/n, my=sy/n;
+    const slope=(sxy-n*mx*my)/(sxx-n*mx*mx);
+    return {s:-slope, C:Math.exp(my-slope*mx)};
+  }
+  const REAL_FIT = logFit(REAL_TOP50);
+  const REAL_VALUES = (()=>{ const v=[]; for(let r=1;r<=TOP_N;r++) v.push(r<=50 ? REAL_TOP50[r-1] : REAL_FIT.C*Math.pow(r,-REAL_FIT.s)); return v; })();
+  const REAL_SUM = REAL_VALUES.reduce((a,b)=>a+b,0);
+  const REAL_WEIGHTS = REAL_VALUES.map(v=>v/REAL_SUM);
+  const REAL_TOP50_SUM = REAL_TOP50.reduce((a,b)=>a+b,0);
+
+  function fmtUSD(v){
+    if(v===0) return '$0.00';
+    const a = Math.abs(v);
+    if(a >= 1000000) return '$' + (v/1000000).toLocaleString(undefined,{maximumFractionDigits:2}) + 'M';
+    if(a >= 1000) return '$' + v.toLocaleString(undefined,{maximumFractionDigits:0});
+    if(a >= 1) return '$' + v.toLocaleString(undefined,{maximumFractionDigits:2});
+    if(a >= 0.01) return '$' + v.toFixed(4);
+    if(a >= 0.000001) return '$' + v.toFixed(6);
+    return '$' + v.toExponential(2);
+  }
+  function fmtVol(v){
+    if(v>=1e9) return '$'+(v/1e9).toFixed(2)+'B';
+    if(v>=1e6) return '$'+(v/1e6).toFixed(1)+'M';
+    if(v>=1e3) return '$'+(v/1e3).toFixed(0)+'K';
+    return '$'+v.toFixed(0);
+  }
+
+  function redeemedFraction(volume, mode, manualPct){
+    if(mode==='0') return 0;
+    if(mode==='manual') return manualPct/100;
+    // whitepaper anchors: (0,0) (9e6,0) (24e6,.07) (40e6,.15), extrapolate slope beyond 40e6
+    const pts = [[0,0],[9e6,0],[24e6,0.07],[40e6,0.15]];
+    if(volume<=9e6) return 0;
+    if(volume<=24e6){
+      const t=(volume-9e6)/(24e6-9e6); return 0 + t*0.07;
+    }
+    if(volume<=40e6){
+      const t=(volume-24e6)/(40e6-24e6); return 0.07 + t*0.08;
+    }
+    const slope = (0.15-0.07)/(40e6-24e6);
+    let f = 0.15 + slope*(volume-40e6);
+    return Math.min(f, 0.5);
+  }
+
+  function backingPerCoin(volume, vaultFeePct, redeemFrac){
+    const vaultInflow = volume * (vaultFeePct/100);
+    const circ = TOTAL_SUPPLY * (1-redeemFrac);
+    return vaultInflow / circ;
+  }
+
+  function skewWeights(s){
+    let sum=0; const w=[];
+    for(let r=1;r<=TOP_N;r++){ const x = 1/Math.pow(r,s); w.push(x); sum+=x; }
+    return w.map(x=>x/sum);
+  }
+
+  function currentWeights(inp){
+    return inp.weightMode==='real' ? REAL_WEIGHTS : skewWeights(inp.skew);
+  }
+
+  function skewLabel(s){
+    if(s<=0.05) return 'Equal';
+    if(s<0.6) return 'Mild';
+    if(s<1.5) return 'Moderate';
+    if(s<2.2) return 'Steep';
+    return 'Winner-take-most';
+  }
+
+  let priceBasis = 'market';
+
+  function readInputs(){
+    const volume = Math.pow(10, parseFloat($('volume').value));
+    const mcap = Math.pow(10, parseFloat($('mcap').value));
+    const vaultFee = parseFloat($('vaultFee').value);
+    const allocPct = parseFloat($('allocPct').value);
+    const redeemMode = $('redeemMode').value;
+    const redeemManual = parseFloat($('redeemManual').value);
+    const weightMode = $('weightMode').value;
+    const skew = parseFloat($('skew').value);
+    const rank = parseInt($('rank').value,10);
+    const nfts = parseInt($('nfts').value,10);
+    return {volume,mcap,vaultFee,allocPct,redeemMode,redeemManual,weightMode,skew,rank,nfts,basis:priceBasis};
+  }
+
+  function computeForVolume(volume, inp){
+    const redeemFrac = redeemedFraction(volume, inp.redeemMode, inp.redeemManual);
+    const circSupply = TOTAL_SUPPLY * (1-redeemFrac);
+    const backing = backingPerCoin(volume, inp.vaultFee, redeemFrac);
+    const marketPrice = inp.mcap / circSupply;
+    const premium = marketPrice / backing;
+    const price = inp.basis==='market' ? marketPrice : backing;
+    const allocTokens = TOTAL_SUPPLY * (inp.allocPct/100);
+    const poolValue = allocTokens * price;
+    const nftPoolTokens = allocTokens * 0.5;
+    const lbPoolTokens = allocTokens * 0.5;
+    const perNftTokens = nftPoolTokens / TOTAL_NFTS;
+    const perNftValue = perNftTokens * price;
+    const weights = currentWeights(inp);
+    const rankValue = r => lbPoolTokens * weights[r-1] * price;
+    return {backing, marketPrice, premium, price, poolValue, perNftValue, rankValue, lbPoolTokens, weights, redeemFrac, circSupply};
+  }
+
+  function render(){
+    const inp = readInputs();
+    $('vVolume').textContent = fmtVol(inp.volume);
+    $('vMcap').textContent = fmtVol(inp.mcap);
+    $('vVault').textContent = inp.vaultFee.toFixed(2)+'%';
+    $('vAlloc').textContent = inp.allocPct.toFixed(1)+'%';
+    $('vSkew').textContent = skewLabel(inp.skew);
+    $('vRank').textContent = '#'+inp.rank;
+    $('vNfts').textContent = inp.nfts;
+    $('manualRedeemWrap').style.display = inp.redeemMode==='manual' ? 'block' : 'none';
+    $('vRedeem').textContent = inp.redeemManual+'%';
+    $('skewWrap').style.display = inp.weightMode==='parametric' ? 'block' : 'none';
+    $('realStatsWrap').textContent = inp.weightMode==='real'
+      ? 'Fitted from your data: exponent ≈'+REAL_FIT.s.toFixed(2)+' · your top 50 hold ≈'+(100*REAL_TOP50_SUM/REAL_SUM).toFixed(0)+'% of the estimated top-100 pool weight · ranks 51–100 extrapolated, not observed.'
+      : '';
+
+    const r = computeForVolume(inp.volume, inp);
+    $('tBacking').textContent = fmtUSD(r.backing);
+    $('tBackingSub').textContent = (r.redeemFrac*100).toFixed(1)+'% of supply redeemed at this volume';
+    $('tMarket').textContent = fmtUSD(r.marketPrice);
+    $('tMarketSub').textContent = fmtVol(inp.mcap)+' mcap ÷ circulating supply';
+    $('tPremium').textContent = r.premium.toFixed(1)+'×';
+    $('tPremiumSub').textContent = r.premium < 0.95 ? 'below the 95% arb floor — wouldn\'t hold' : 'market ÷ floor backing';
+    $('tPool').textContent = fmtUSD(r.poolValue);
+    $('tPoolSub').textContent = '1–10% of 1B supply × '+(inp.basis==='market'?'market price':'floor');
+    $('tPerNft').textContent = fmtUSD(r.perNftValue);
+    const rankVal = r.rankValue(inp.rank);
+    $('tRank').textContent = fmtUSD(rankVal);
+    $('tRankSub').textContent = 'rank #'+inp.rank+', this launch, at '+(inp.basis==='market'?'market price':'floor');
+    const yourNfts = r.perNftValue * inp.nfts;
+    $('tYourNfts').textContent = fmtUSD(yourNfts);
+    const combined = yourNfts + rankVal;
+    $('tCombined').textContent = fmtUSD(combined);
+
+    renderChart(inp);
+    renderTable(inp);
+    renderMcapTable(inp);
+  }
+
+  function renderChart(inp){
+    const svg = $('chart');
+    const W=640,H=220, padL=64,padR=16,padT=14,padB=28;
+    const xMin=5, xMax=8.7; // log10 volume 100K..500M
+    const pts=[];
+    let maxB=0;
+    for(let lv=xMin; lv<=xMax; lv+=0.05){
+      const v = Math.pow(10,lv);
+      const rf = redeemedFraction(v, inp.redeemMode, inp.redeemManual);
+      const b = backingPerCoin(v, inp.vaultFee, rf);
+      pts.push([lv,b]); if(b>maxB) maxB=b;
+    }
+    const x = lv => padL + (lv-xMin)/(xMax-xMin)*(W-padL-padR);
+    const y = b => H-padB - (b/maxB)*(H-padT-padB);
+    let d = pts.map((p,i)=> (i===0?'M':'L')+x(p[0]).toFixed(1)+','+y(p[1]).toFixed(1)).join(' ');
+
+    const curVol = Math.log10(inp.volume);
+    const curB = backingPerCoin(inp.volume, inp.vaultFee, redeemedFraction(inp.volume, inp.redeemMode, inp.redeemManual));
+
+    let grid='';
+    const xt=[5,6,7,8];
+    xt.forEach(t=>{
+      grid += `<line class="gridline" x1="${x(t)}" y1="${padT}" x2="${x(t)}" y2="${H-padB}"/>`;
+      grid += `<text x="${x(t)}" y="${H-padB+16}" text-anchor="middle">${fmtVol(Math.pow(10,t))}</text>`;
+    });
+    for(let i=0;i<=4;i++){
+      const b = maxB*i/4;
+      grid += `<line class="gridline" x1="${padL}" y1="${y(b)}" x2="${W-padR}" y2="${y(b)}"/>`;
+      grid += `<text x="${padL-6}" y="${y(b)+3}" text-anchor="end">${fmtUSD(b)}</text>`;
+    }
+
+    svg.innerHTML = grid + `<path class="curve" d="${d}"/>` +
+      `<circle class="marker" cx="${x(curVol)}" cy="${y(curB)}" r="4.5"/>`;
+  }
+
+  function renderTable(inp){
+    const tiers = [1e6,5e6,10e6,25e6,50e6,100e6,250e6];
+    const body = $('volTableBody');
+    body.innerHTML='';
+    tiers.forEach(v=>{
+      const r = computeForVolume(v, inp);
+      const near = Math.abs(Math.log10(v)-Math.log10(inp.volume)) < 0.12;
+      const tr = document.createElement('tr');
+      if(near) tr.className='hi';
+      tr.innerHTML = `<td>${fmtVol(v)}</td><td>${fmtUSD(r.backing)}</td><td>${fmtUSD(r.poolValue)}</td>` +
+        `<td>${fmtUSD(r.perNftValue)}</td><td>${fmtUSD(r.rankValue(1))}</td>` +
+        `<td>${fmtUSD(r.rankValue(25))}</td><td>${fmtUSD(r.rankValue(100))}</td>`;
+      body.appendChild(tr);
+    });
+  }
+
+  function renderMcapTable(inp){
+    const tiers = [50000,250000,1000000,5000000,20000000,50000000,100000000,250000000];
+    const redeemFrac = redeemedFraction(inp.volume, inp.redeemMode, inp.redeemManual);
+    const circSupply = TOTAL_SUPPLY * (1-redeemFrac);
+    const backing = backingPerCoin(inp.volume, inp.vaultFee, redeemFrac);
+    const allocTokens = TOTAL_SUPPLY * (inp.allocPct/100);
+    const nftPoolTokens = allocTokens*0.5, lbPoolTokens = allocTokens*0.5;
+    const perNftTokens = nftPoolTokens/TOTAL_NFTS;
+    const weights = currentWeights(inp);
+    const body = $('mcapTableBody');
+    body.innerHTML='';
+    tiers.forEach(mc=>{
+      const price = mc/circSupply;
+      const premium = price/backing;
+      const near = Math.abs(Math.log10(mc)-Math.log10(inp.mcap)) < 0.12;
+      const tr = document.createElement('tr');
+      if(near) tr.className='hi';
+      const premCell = premium<0.95 ? `<span style="color:var(--warn)">${premium.toFixed(1)}×</span>` : premium.toFixed(1)+'×';
+      tr.innerHTML = `<td>${fmtVol(mc)}</td><td>${fmtUSD(price)}</td><td>${premCell}</td>`+
+        `<td>${fmtUSD(perNftTokens*price)}</td><td>${fmtUSD(lbPoolTokens*weights[0]*price)}</td>`+
+        `<td>${fmtUSD(lbPoolTokens*weights[24]*price)}</td><td>${fmtUSD(lbPoolTokens*weights[99]*price)}</td>`;
+      body.appendChild(tr);
+    });
+  }
+
+  const PRESETS = {
+    dead:     {volume: 5000,        mcap: 2000},
+    grad:     {volume: 75000,       mcap: 50000},
+    pumpavg:  {volume: 8190,        mcap: 8190},
+    ponsavg:  {volume: 111500,      mcap: 111500},
+    breakout: {volume: 3000000,     mcap: 1000000},
+    megahit:  {volume: 200000000,   mcap: 75000000}
+  };
+  $('preset').addEventListener('change', ()=>{
+    const p = PRESETS[$('preset').value];
+    if(!p) return;
+    $('volume').value = Math.log10(p.volume).toFixed(2);
+    $('mcap').value = Math.log10(p.mcap).toFixed(2);
+    render();
+  });
+
+  document.querySelectorAll('#basisSeg button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      priceBasis = btn.dataset.v;
+      document.querySelectorAll('#basisSeg button').forEach(b=>b.classList.toggle('active', b===btn));
+      render();
+    });
+  });
+
+  ['volume','mcap','vaultFee','allocPct','redeemMode','redeemManual','weightMode','skew','rank','nfts'].forEach(id=>{
+    $(id).addEventListener('input', render);
+    $(id).addEventListener('change', render);
+  });
+
+  render();
+})();
+</script>
